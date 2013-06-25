@@ -5,11 +5,11 @@ var uniq = require("uniq")
 
 var PREFIX_COUNTER = 0
 
-function CompiledArgument(name, lvalue, rvalue, present) {
+function CompiledArgument(name, lvalue, rvalue) {
   this.name = name
   this.lvalue = lvalue
   this.rvalue = rvalue
-  this.present = present
+  this.count = 0
 }
 
 function CompiledRoutine(body, args, thisVars, localVars) {
@@ -20,6 +20,9 @@ function CompiledRoutine(body, args, thisVars, localVars) {
 }
 
 function isGlobal(identifier) {
+  if(identifier === "eval") {
+    throw new Error("cwise-parser: eval() not allowed")
+  }
   if(typeof window !== "undefined") {
     return identifier in window
   } else if(typeof GLOBAL !== "undefined") {
@@ -32,7 +35,7 @@ function isGlobal(identifier) {
 }
 
 function getArgNames(ast) {
-  var params = ast.body.expression.callee.params
+  var params = ast.body[0].expression.callee.params
   var names = new Array(params.length)
   for(var i=0; i<params.length; ++i) {
     names[i] = params[i].name
@@ -40,7 +43,7 @@ function getArgNames(ast) {
   return names
 }
 
-function preprocess(func, types) {
+function preprocess(func) {
   var src = ["(", func, ")()"].join("")
   var ast = esprima.parse(src, { range: true })
   
@@ -49,25 +52,9 @@ function preprocess(func, types) {
   
   //Parse out arguments
   var argNames = getArgNames(ast)
-  if(argNames.length > types.length) {
-    throw new Error("Too many arguments for subroutine")
-  }
-  var compiledArgs = new Array(types.length)
+  var compiledArgs = new Array(argNames.length)
   for(var i=0; i<argNames.length; ++i) {
-    if(types[i] === "array") {
-      compiledArgs[i] = new CompiledArgument(prefix + "arg" + i, false, false, true)
-    } else if(types[i] === "scalar") {
-      compiledArgs[i] = new CompiledArgument("inline_scalar" + i, false, false, true)
-    } else if(types[i] === "shape") {
-      compiledArgs[i] = new CompiledArgument("inline_shape", false, false, true)
-    } else if(types[i] === "index") {
-      compiledArgs[i] = new CompiledArgument("inline_index", false, false, true)
-    } else {
-      throw new Error("Unrecognized type")
-    }
-  }
-  for(var i=argNames.length; i<=types.length; ++i) {
-    compiledArgs[i] = new CompiledArgument("", false, false, false)
+    compiledArgs[i] = new CompiledArgument(prefix + "arg" + i, false, false)
   }
   
   //Create temporary data structure for source rewriting
@@ -106,12 +93,30 @@ function preprocess(func, types) {
   
   //Remove any underscores
   function escapeString(str) {
-    return str.replace(/\_/g, "\\_")
+    return "'"+(str.replace(/\_/g, "\\_").replace(/\'/g, "\'"))+"'"
   }
   
   //Returns the source of an identifier
   function source(node) {
     return exploded.slice(node.range[0], node.range[1]).join("")
+  }
+  
+  //Computes the usage of a node
+  var LVALUE = 1
+  var RVALUE = 2
+  function getUsage(node) {
+    if(node.parent.type === "AssignmentExpression") {
+      if(node.parent.left === node) {
+        if(node.parent.operator === "=") {
+          return LVALUE
+        }
+        return LVALUE|RVALUE
+      }
+    }
+    if(node.parent.type === "UpdateExpression") {
+      return LVALUE|RVALUE
+    }
+    return RVALUE
   }
   
   //Handle visiting a node
@@ -128,19 +133,22 @@ function preprocess(func, types) {
         visit(node.object, node)
       }
     } else if(node.type === "ThisExpression") {
-      throw new Error("Computed this is not allowed")
+      throw new Error("cwise-parser: Computed this is not allowed")
     } else if(node.type === "Identifier") {
       //Handle identifier
       var name = node.name
       var argNo = argNames.indexOf(name)
       if(argNo >= 0) {
         var carg = compiledArgs[argNo]
-        rewrite(node, carg.name)
-        carg.rvalue = true
-        if(parent.type === "UpdateExpression" ||
-           (parent.type === "AssignmentExpression" && parent.left === node)) {
+        var usage = getUsage(node)
+        if(usage & LVALUE) {
           carg.lvalue = true
         }
+        if(usage & RVALUE) {
+          carg.rvalue = true
+        }
+        ++carg.count
+        rewrite(node, carg.name)
       } else if(isGlobal(name)) {
         //Don't rewrite globals
       } else {
@@ -150,6 +158,8 @@ function preprocess(func, types) {
       if(typeof node.value === "string") {
         rewrite(node, escapeString(node.value))
       }
+    } else if(node.type === "WithStatement") {
+      throw new Error("cwise-parser: with() statements not allowed")
     } else {
       //Visit all children
       var keys = Object.keys(node)
@@ -157,7 +167,7 @@ function preprocess(func, types) {
         if(keys[i] === "parent") {
           continue
         }
-        var value = node[keys]
+        var value = node[keys[i]]
         if(value) {
           if(value instanceof Array) {
             for(var j=0; j<value.length; ++j) {
@@ -171,14 +181,14 @@ function preprocess(func, types) {
         }
       }
     }
-  })(ast.body.expression.callee.body, undefined)
+  })(ast.body[0].expression.callee.body, undefined)
   
   //Remove duplicate variables
   uniq(localVars)
   uniq(thisVars)
   
   //Return body
-  var routine = new CompiledRoutine(source(ast.body.expression.callee.body), compiledArgs, thisVars, localVars)
+  var routine = new CompiledRoutine(source(ast.body[0].expression.callee.body), compiledArgs, thisVars, localVars)
   return routine
 }
 
