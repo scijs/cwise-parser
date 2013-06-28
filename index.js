@@ -54,7 +54,7 @@ function preprocess(func) {
   var argNames = getArgNames(ast)
   var compiledArgs = new Array(argNames.length)
   for(var i=0; i<argNames.length; ++i) {
-    compiledArgs[i] = new CompiledArgument(prefix + "arg" + i + "_", false, false)
+    compiledArgs[i] = new CompiledArgument([prefix, "arg", i, "_"].join(""), false, false)
   }
   
   //Create temporary data structure for source rewriting
