@@ -2,6 +2,9 @@ cwise-parser
 ============
 New preprocessor for cwise. Not intended to be run by itself (use [cwise](https://github.com/scijs/cwise) instead).
 
+[![build status](https://secure.travis-ci.org/scijs/cwise-parser.png)](http://tr
+avis-ci.org/scijs/cwise-parser)
+
 # Install
 Install using [npm](https://www.npmjs.com/):
 
