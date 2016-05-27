@@ -7,7 +7,7 @@
     "test": "test"
   },
   "dependencies": {
-    "esprima": "^1.0.3",
+    "esprima": "^2.7.2",
     "uniq": "^1.0.0"
   },
   "devDependencies": {
