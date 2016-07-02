@@ -2,9 +2,9 @@
 
 var parse = require("../index.js")
 
-require("tape")("basic tests", function(t) {
+require("tape")("es6 tests", function(t) {
 
-  var parsed = parse(function(a, b, c) {
+  var parsed = parse((a, b, c) => {
     a += b
     c = Math.cos(b)
   })
@@ -25,17 +25,3 @@ require("tape")("basic tests", function(t) {
 
   t.end()
 })
-
-
-function isArrowFunctionSupported() {
-  try {
-    new Function('() => {}');
-  } catch (err) {
-    return false;
-  }
-  return true;
-}
-
-if (isArrowFunctionSupported()) {
-  require('./test.es6');
-}
