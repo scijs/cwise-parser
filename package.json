@@ -1,6 +1,6 @@
 {
   "name": "cwise-parser",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Parser for cwise",
   "main": "index.js",
   "directories": {
