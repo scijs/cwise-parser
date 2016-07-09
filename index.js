@@ -70,7 +70,7 @@ function preprocess(func) {
   
   //Retrieves a local variable
   function createLocal(id) {
-    var nstr = prefix + id.replace(/\_/g, "__")
+    var nstr = id !== 'arguments' ? prefix + id.replace(/\_/g, "__") : 'arguments'
     localVars.push(nstr)
     return nstr
   }
