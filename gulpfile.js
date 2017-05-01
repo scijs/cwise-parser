@@ -34,5 +34,5 @@ gulp.task('copy-files', () => {
 
 gulp.task('default', (cb) => {
 	const sequence = require('gulp-sequence');
-	sequence('clean', 'compile-ts', cb);
+	sequence('clean', 'compile-ts', 'copy-files', cb);
 });
