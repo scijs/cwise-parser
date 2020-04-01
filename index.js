@@ -44,11 +44,12 @@ function getArgNames(ast) {
 }
 
 function preprocess(func) {
+  PREFIX_COUNTER++;
+  //Compute new prefix
+  var prefix = "_inline_" + PREFIX_COUNTER + "_"
+  
   var src = ["(", func, ")()"].join("")
   var ast = esprima.parse(src, { range: true })
-  
-  //Compute new prefix
-  var prefix = "_inline_" + (PREFIX_COUNTER++) + "_"
   
   //Parse out arguments
   var argNames = getArgNames(ast)
