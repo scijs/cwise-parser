@@ -7,11 +7,11 @@
     "test": "test"
   },
   "dependencies": {
-    "esprima": "^1.0.3",
-    "uniq": "^1.0.0"
+    "esprima": "^4.0.1",
+    "uniq": "^1.0.1"
   },
   "devDependencies": {
-    "tape": "^4.0.0"
+    "tape": "^5.0.1"
   },
   "scripts": {
     "test": "tape test/*.js"
